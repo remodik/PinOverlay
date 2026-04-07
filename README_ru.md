@@ -32,6 +32,8 @@
 
 ```bat
 cd PinExtension
+```
+```
 build.bat
 ```
 
@@ -43,6 +45,8 @@ build.bat
 
 ```bat
 cd PinOverlay
+```
+```
 build.bat
 ```
 
@@ -65,6 +69,8 @@ build.bat
 Запусти PowerShell **от имени Администратора**:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
+```
+```
 .\install.ps1
 ```
 
@@ -75,6 +81,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 PowerShell **от имени Администратора** из папки `PinOverlay\`:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
+```
+```
 .\install.ps1
 ```
 
