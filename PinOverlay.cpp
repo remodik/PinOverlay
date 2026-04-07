@@ -3,6 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <sstream>
 
 #pragma comment(lib, "shlwapi.lib")
 
@@ -32,7 +33,7 @@ static std::wstring GetPinnedFilePath() {
 }
 
 static std::wstring ToLower(std::wstring s) {
-    std::transform(s.begin(), s.end(), s.begin(), ::towlower);
+    std::transform(s.begin(), s.end(), s.begin(), towlower);
     return s;
 }
 
@@ -40,21 +41,35 @@ bool PinOverlay::IsPinned(const std::wstring& path) {
     const std::wstring pinnedFile = GetPinnedFilePath();
     if (pinnedFile.empty()) return false;
 
-    std::wifstream f(pinnedFile.c_str());
-    if (!f.is_open()) return false;
+    const HANDLE hFile = CreateFileW(pinnedFile.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return false;
+
+    const DWORD size = GetFileSize(hFile, nullptr);
+    if (size == 0 || size == INVALID_FILE_SIZE) { CloseHandle(hFile); return false; }
+
+    std::string buf(size, '\0');
+    DWORD read = 0;
+    ReadFile(hFile, &buf[0], size, &read, nullptr);
+    CloseHandle(hFile);
+
+    // Convert UTF-8 content to wstring
+    const int wlen = MultiByteToWideChar(CP_UTF8, 0, buf.c_str(), static_cast<int>(read), nullptr, 0);
+    std::wstring content(wlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, buf.c_str(), static_cast<int>(read), &content[0], wlen);
 
     std::wstring needle = ToLower(path);
-    // Strip trailing slash
     while (!needle.empty() && (needle.back() == L'\\' || needle.back() == L'/'))
         needle.pop_back();
 
+    // Split by newline and compare
+    std::wistringstream ss(content);
     std::wstring line;
-    while (std::getline(f, line)) {
+    while (std::getline(ss, line)) {
         while (!line.empty() && (line.back() == L'\r' || line.back() == L'\n' ||
                line.back() == L'\\' || line.back() == L'/'))
             line.pop_back();
-        if (ToLower(line) == needle)
-            return true;
+        if (ToLower(line) == needle) return true;
     }
     return false;
 }
@@ -71,7 +86,7 @@ STDMETHODIMP PinOverlay::GetOverlayInfo(const LPWSTR pwszIconFile, const int cch
     if (!pwszIconFile || !pIndex || !pdwFlags) return E_INVALIDARG;
 
     // Use our own DLL as icon source (icon index 0)
-    ::GetModuleFileNameW(g_hModule, pwszIconFile, cchMax);
+    GetModuleFileNameW(g_hModule, pwszIconFile, cchMax);
     *pIndex  = 0;
     *pdwFlags = ISIOI_ICONFILE | ISIOI_ICONINDEX;
     return S_OK;
@@ -143,7 +158,7 @@ STDAPI DllCanUnloadNow() {
 
 STDAPI DllRegisterServer() {
     wchar_t dllPath[MAX_PATH];
-    ::GetModuleFileNameW(g_hModule, dllPath, MAX_PATH);
+    GetModuleFileNameW(g_hModule, dllPath, MAX_PATH);
 
     wchar_t clsidStr[64];
     StringFromGUID2(CLSID_PinOverlay, clsidStr, 64);
@@ -162,18 +177,18 @@ STDAPI DllRegisterServer() {
     RegCreateKeyExW(HKEY_LOCAL_MACHINE, inproc.c_str(), 0, nullptr,
                     REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr);
     RegSetValueExW(hKey, nullptr, 0, REG_SZ,
-                   (BYTE*)dllPath, (DWORD)((wcslen(dllPath) + 1) * sizeof(wchar_t)));
+                   (BYTE*)dllPath, (wcslen(dllPath) + 1) * sizeof(wchar_t));
     RegSetValueExW(hKey, L"ThreadingModel", 0, REG_SZ,
                    (BYTE*)L"Apartment", sizeof(L"Apartment"));
     RegCloseKey(hKey);
 
     // ShellIconOverlayIdentifiers — spaces before name = high priority
-    std::wstring overlayKey = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer"
+    const std::wstring overlayKey = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer"
                               L"\\ShellIconOverlayIdentifiers\\  PinOverlay";
     RegCreateKeyExW(HKEY_LOCAL_MACHINE, overlayKey.c_str(), 0, nullptr,
                     REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr);
     RegSetValueExW(hKey, nullptr, 0, REG_SZ,
-                   (BYTE*)clsidStr, (DWORD)((wcslen(clsidStr) + 1) * sizeof(wchar_t)));
+                   (BYTE*)clsidStr, (wcslen(clsidStr) + 1) * sizeof(wchar_t));
     RegCloseKey(hKey);
 
     return S_OK;

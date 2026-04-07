@@ -27,7 +27,7 @@ cl.exe /nologo /W3 /O2 /EHsc /LD ^
     PinOverlay.cpp %RES_FILE% ^
     /Fe:PinOverlay.dll ^
     /link /DEF:PinOverlay.def ^
-    kernel32.lib user32.lib shell32.lib shlwapi.lib ole32.lib
+    kernel32.lib user32.lib shell32.lib shlwapi.lib ole32.lib advapi32.lib
 
 if %ERRORLEVEL% NEQ 0 (
     echo BUILD FAILED
