@@ -1,0 +1,3 @@
+// PinOverlay.rc
+// Icon resource — index 0 used by GetOverlayInfo
+1 ICON "pin_overlay.ico"
