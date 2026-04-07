@@ -65,6 +65,8 @@ Download `ServerManager.exe` from the [SharpShell releases page](https://github.
 Run PowerShell **as Administrator**:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
+```
+```
 .\install.ps1
 ```
 
@@ -73,6 +75,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 Run PowerShell **as Administrator** from the `PinOverlay\` folder:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
+```
+```
 .\install.ps1
 ```
 
